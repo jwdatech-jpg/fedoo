@@ -108,26 +108,18 @@ firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 let isUpdatingFromServer = false;
 
+function initializeCheckboxIds(){
+  let checkboxIndex = 0;
+  document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+    if(!checkbox.dataset.cbId){
+      checkbox.dataset.cbId = 'cb_' + checkboxIndex;
+      checkboxIndex++;
+    }
+  });
+}
+
 function getCheckboxId(checkbox){
-  const row = checkbox.closest('tr');
-  if(!row) return null;
-  const taskCell = row.querySelector('.task');
-  const personHeader = checkbox.closest('table').querySelectorAll('th')[Array.from(checkbox.closest('table').querySelectorAll('th')).indexOf(checkbox.closest('td')?.parentElement.querySelector('th')) || 1];
-  
-  // Get task name
-  const taskName = taskCell ? taskCell.textContent.trim() : '';
-  
-  // Get person name from table header
-  const table = checkbox.closest('table');
-  const thCells = table.querySelectorAll('th');
-  const tdIndex = Array.from(checkbox.closest('tr').querySelectorAll('td')).indexOf(checkbox.closest('td'));
-  const personName = thCells[tdIndex + 1] ? thCells[tdIndex + 1].textContent.trim() : '';
-  
-  // Get date from the table's datehead
-  const dateheader = table.querySelector('.datehead');
-  const dateName = dateheader ? dateheader.textContent.trim() : '';
-  
-  return `${dateName}_${taskName}_${personName}`.replace(/\s+/g, '_');
+  return checkbox.dataset.cbId || 'cb_unknown';
 }
 
 function saveCheckboxState(){
@@ -269,6 +261,7 @@ window.addEventListener('scroll', function(){
 });
 
 document.addEventListener('DOMContentLoaded', function(){
+  initializeCheckboxIds();
   loadCheckboxState();
   setupRealtimeSync();
   highlightMissedCheckboxes();
