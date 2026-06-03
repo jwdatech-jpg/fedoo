@@ -46,7 +46,28 @@ position:fixed;bottom:30px;right:30px;z-index:999;background:#4CAF50;color:white
 #scrollToTopBtn:hover{background:#45a049}
 #scrollToTopBtn.show{display:block}
 
+.stats-container{
+background:linear-gradient(135deg, #4CAF50 0%, #2e7d32 100%);
+color:white;padding:15px;border-radius:8px;margin-bottom:20px;text-align:center;box-shadow:0 4px 6px rgba(0,0,0,0.1)}
+.stats-container h2{margin:0 0 10px 0;font-size:18px}
+.stat-item{display:inline-block;margin:0 15px;font-size:14px}
+.stat-number{font-size:24px;font-weight:bold}
+.progress-bar{width:100%;height:10px;background:#555;border-radius:5px;margin:10px 0;overflow:hidden}
+.progress-fill{height:100%;background:#4CAF50;transition:width 0.3s}
+
 @media (max-width:768px){
+.stats-container{padding:10px;margin-bottom:15px}
+.stats-container h2{font-size:16px}
+.stat-item{display:block;margin:5px 0;font-size:12px}
+.stat-number{font-size:20px}
+}
+
+@media (max-width:480px){
+.stats-container{padding:8px;margin-bottom:10px}
+.stats-container h2{font-size:14px}
+.stat-item{font-size:11px}
+.stat-number{font-size:18px}
+}
 #scrollToTopBtn{width:45px;height:45px;bottom:20px;right:20px;font-size:18px}
 }
 
@@ -94,6 +115,24 @@ function highlightMissedCheckboxes(){
   saveCheckboxState();
 }
 
+function updateStats(){
+  const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+  const total = checkboxes.length;
+  const completed = Array.from(checkboxes).filter(cb => cb.checked).length;
+  const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+  
+  const statsContainer = document.getElementById('stats');
+  if(statsContainer){
+    statsContainer.innerHTML = `
+      <h2>📊 تقدم المتابعة</h2>
+      <div class="stat-item">✅ مكتمل: <span class="stat-number">${completed}</span></div>
+      <div class="stat-item">📝 إجمالي: <span class="stat-number">${total}</span></div>
+      <div class="stat-item">📈 النسبة: <span class="stat-number">${percentage}%</span></div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${percentage}%"></div></div>
+    `;
+  }
+}
+
 function scrollToTop(){
   window.scrollTo({top: 0, behavior: 'smooth'});
 }
@@ -110,6 +149,7 @@ window.addEventListener('scroll', function(){
 document.addEventListener('DOMContentLoaded', function(){
   loadCheckboxState();
   highlightMissedCheckboxes();
+  updateStats();
   scrollToCurrentDate();
   
   const scrollBtn = document.getElementById('scrollToTopBtn');
@@ -117,7 +157,10 @@ document.addEventListener('DOMContentLoaded', function(){
     scrollBtn.addEventListener('click', scrollToTop);
   }
 });
-document.addEventListener('change', highlightMissedCheckboxes);
+document.addEventListener('change', function(){
+  highlightMissedCheckboxes();
+  updateStats();
+});
 
 function scrollToCurrentDate(){
   const today = new Date();
@@ -140,6 +183,8 @@ function scrollToCurrentDate(){
 <h1>متابعة يومية </h1>
 <p><strong>النية:</strong> تيسير أمر الزواج</p>
 <p><strong>الفترة:</strong> من 03/06/2026 إلى 24/07/2026</p>
+
+<div id="stats" class="stats-container"></div>
 
 <button id="scrollToTopBtn" title="اذهب إلى الأعلى">▲</button>
 
