@@ -1,0 +1,2938 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>متابعة</title>
+<style>
+body{font-family:Tahoma,Arial,sans-serif;direction:rtl;margin:20px}
+h1,h2{text-align:center}
+table{border-collapse:collapse;width:100%;margin-bottom:18px}
+th,td{border:1px solid #666;padding:6px;vertical-align:top;font-size:14px}
+th{background:#f0f0f0}
+.task{width:35%}
+.person{width:12%;text-align:center}
+.datehead{background:#e9e9e9;font-weight:bold}
+.datehead-friday{background:#ffd700;font-weight:bold;color:#333}
+.checkbox-cell.missed{background:#ffcccc !important;border: 2px solid #ff4444}
+.checkbox-cell.completed{background:#ccffcc !important;border: 2px solid #00aa00}
+input[type=checkbox]{transform:scale(1.2);}
+
+@media (max-width:768px){
+body{margin:10px;font-size:13px}
+h1{font-size:18px}
+table{margin-bottom:12px}
+th,td{padding:1px;font-size:12px}
+.task{width:45%}
+.person{width:22.5%;font-size:11px}
+.datehead{font-size:13px;padding:1px}
+input[type=checkbox]{transform:scale(1.5)}
+}
+
+@media (max-width:480px){
+body{margin:5px;font-size:12px}
+h1{font-size:16px}
+p{font-size:11px}
+table{margin-bottom:10px;font-size:11px}
+th,td{padding:0px 1px;font-size:11px;word-break:break-word}
+.task{width:50%;font-size:12px}
+.person{width:25%;font-size:10px}
+.datehead{font-size:12px;padding:1px}
+input[type=checkbox]{transform:scale(1.3)}
+}
+
+#scrollToTopBtn{
+position:fixed;bottom:30px;right:30px;z-index:999;background:#4CAF50;color:white;border:none;border-radius:50%;width:50px;height:50px;font-size:20px;cursor:pointer;display:none;box-shadow:0 4px 8px rgba(0,0,0,0.3)}
+#scrollToTopBtn:hover{background:#45a049}
+#scrollToTopBtn.show{display:block}
+
+.stats-container{
+background:linear-gradient(135deg, #4CAF50 0%, #2e7d32 100%);
+color:white;padding:15px;border-radius:8px;margin-bottom:20px;text-align:center;box-shadow:0 4px 6px rgba(0,0,0,0.1)}
+.stats-container h2{margin:0 0 10px 0;font-size:18px}
+.stat-item{display:inline-block;margin:0 15px;font-size:14px}
+.stat-number{font-size:24px;font-weight:bold}
+.progress-bar{width:100%;height:10px;background:#555;border-radius:5px;margin:10px 0;overflow:hidden}
+.progress-fill{height:100%;background:#4CAF50;transition:width 0.3s}
+
+@media (max-width:768px){
+.stats-container{padding:10px;margin-bottom:15px}
+.stats-container h2{font-size:16px}
+.stat-item{display:block;margin:5px 0;font-size:12px}
+.stat-number{font-size:20px}
+}
+
+@media (max-width:480px){
+.stats-container{padding:8px;margin-bottom:10px}
+.stats-container h2{font-size:14px}
+.stat-item{font-size:11px}
+.stat-number{font-size:18px}
+}
+#scrollToTopBtn{width:45px;height:45px;bottom:20px;right:20px;font-size:18px}
+}
+
+@media (max-width:480px){
+#scrollToTopBtn{width:40px;height:40px;bottom:15px;right:15px;font-size:16px}
+}
+</style>
+<script>
+function saveCheckboxState(){
+  const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+  const state = {};
+  checkboxes.forEach((checkbox, index) => {
+    state[index] = checkbox.checked;
+  });
+  localStorage.setItem('checkboxState', JSON.stringify(state));
+}
+
+function loadCheckboxState(){
+  const state = localStorage.getItem('checkboxState');
+  if(state){
+    const parsed = JSON.parse(state);
+    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach((checkbox, index) => {
+      if(parsed[index] !== undefined){
+        checkbox.checked = parsed[index];
+      }
+    });
+  }
+}
+
+function highlightMissedCheckboxes(){
+  const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+  checkboxes.forEach(checkbox => {
+    const cellParent = checkbox.closest('td');
+    if(cellParent){
+      if(!checkbox.checked){
+        cellParent.classList.add('missed');
+        cellParent.classList.remove('completed');
+      } else {
+        cellParent.classList.remove('missed');
+        cellParent.classList.add('completed');
+      }
+    }
+  });
+  saveCheckboxState();
+}
+
+function updateStats(){
+  const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+  const total = checkboxes.length;
+  const completed = Array.from(checkboxes).filter(cb => cb.checked).length;
+  const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+  
+  const statsContainer = document.getElementById('stats');
+  if(statsContainer){
+    statsContainer.innerHTML = `
+      <h2>📊 تقدم المتابعة</h2>
+      <div class="stat-item">✅ مكتمل: <span class="stat-number">${completed}</span></div>
+      <div class="stat-item">📝 إجمالي: <span class="stat-number">${total}</span></div>
+      <div class="stat-item">📈 النسبة: <span class="stat-number">${percentage}%</span></div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${percentage}%"></div></div>
+    `;
+  }
+}
+
+function scrollToTop(){
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+window.addEventListener('scroll', function(){
+  const scrollBtn = document.getElementById('scrollToTopBtn');
+  if(window.scrollY > 300){
+    scrollBtn.classList.add('show');
+  } else {
+    scrollBtn.classList.remove('show');
+  }
+});
+
+document.addEventListener('DOMContentLoaded', function(){
+  loadCheckboxState();
+  highlightMissedCheckboxes();
+  updateStats();
+  scrollToCurrentDate();
+  
+  const scrollBtn = document.getElementById('scrollToTopBtn');
+  if(scrollBtn){
+    scrollBtn.addEventListener('click', scrollToTop);
+  }
+});
+document.addEventListener('change', function(){
+  highlightMissedCheckboxes();
+  updateStats();
+});
+
+function scrollToCurrentDate(){
+  const today = new Date();
+  const day = String(today.getDate()).padStart(2, '0');
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const year = today.getFullYear();
+  const todayStr = `${day}/${month}/${year}`;
+  
+  const dateheaders = document.querySelectorAll('.datehead');
+  for(let header of dateheaders){
+    if(header.textContent.includes(todayStr)){
+      header.scrollIntoView({behavior: 'smooth', block: 'start'});
+      break;
+    }
+  }
+}
+</script>
+</head>
+<body>
+<h1>متابعة يومية </h1>
+<p><strong>النية:</strong> تيسير أمر الزواج</p>
+<p><strong>الفترة:</strong> من 03/06/2026 إلى 24/07/2026</p>
+
+<div id="stats" class="stats-container"></div>
+
+<button id="scrollToTopBtn" title="اذهب إلى الأعلى">▲</button>
+
+    <table>
+    <tr><th colspan="3" class="datehead">الأربعاء - 03/06/2026 (اليوم الأول)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 1)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الخميس - 04/06/2026 (اليوم الثاني)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 2)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead datehead-friday">الجمعة - 05/06/2026 (اليوم الثالث)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزآن 3 - 4)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>إخراج صدقة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">السبت - 06/06/2026 (اليوم الرابع)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 5)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الأحد - 07/06/2026 (اليوم الخامس)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 6)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الاثنين - 08/06/2026 (اليوم السادس)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 7)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الثلاثاء - 09/06/2026 (اليوم السابع)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 8)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الأربعاء - 10/06/2026 (اليوم الثامن)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 9)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الخميس - 11/06/2026 (اليوم التاسع)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 10)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead datehead-friday">الجمعة - 12/06/2026 (اليوم العاشر)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزآن 11 - 12)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>إخراج صدقة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">السبت - 13/06/2026 (اليوم الحادي عشر)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 13)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الأحد - 14/06/2026 (اليوم الثاني عشر)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 14)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الاثنين - 15/06/2026 (اليوم الثالث عشر)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 15)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الثلاثاء - 16/06/2026 (اليوم الرابع عشر)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 16)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الأربعاء - 17/06/2026 (اليوم الخامس عشر)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 17)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الخميس - 18/06/2026 (اليوم السادس عشر)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 18)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead datehead-friday">الجمعة - 19/06/2026 (اليوم السابع عشر)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزآن 19 - 20)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>إخراج صدقة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">السبت - 20/06/2026 (اليوم الثامن عشر)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 21)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الأحد - 21/06/2026 (اليوم التاسع عشر)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 22)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الاثنين - 22/06/2026 (اليوم العشرون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 23)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الثلاثاء - 23/06/2026 (اليوم الحادي والعشرون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 24)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الأربعاء - 24/06/2026 (اليوم الثاني والعشرون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 25)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الخميس - 25/06/2026 (اليوم الثالث والعشرون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 26)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead datehead-friday">الجمعة - 26/06/2026 (اليوم الرابع والعشرون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزآن 27 - 28)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>إخراج صدقة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">السبت - 27/06/2026 (اليوم الخامس والعشرون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 29)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الأحد - 28/06/2026 (اليوم السادس والعشرون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 30)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الاثنين - 29/06/2026 (اليوم السابع والعشرون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 1)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الثلاثاء - 30/06/2026 (اليوم الثامن والعشرون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 2)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الأربعاء - 01/07/2026 (اليوم التاسع والعشرون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 3)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الخميس - 02/07/2026 (اليوم الثلاثون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 4)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead datehead-friday">الجمعة - 03/07/2026 (اليوم الحادي والثلاثون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزآن 5 - 6)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>إخراج صدقة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">السبت - 04/07/2026 (اليوم الثاني والثلاثون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 7)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الأحد - 05/07/2026 (اليوم الثالث والثلاثون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 8)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الاثنين - 06/07/2026 (اليوم الرابع والثلاثون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 9)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الثلاثاء - 07/07/2026 (اليوم الخامس والثلاثون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 10)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الأربعاء - 08/07/2026 (اليوم السادس والثلاثون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 11)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الخميس - 09/07/2026 (اليوم السابع والثلاثون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 12)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead datehead-friday">الجمعة - 10/07/2026 (اليوم الثامن والثلاثون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزآن 13 - 14)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>إخراج صدقة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">السبت - 11/07/2026 (اليوم التاسع والثلاثون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 15)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الأحد - 12/07/2026 (اليوم الأربعون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 16)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الاثنين - 13/07/2026 (اليوم الحادي والأربعون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 17)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الثلاثاء - 14/07/2026 (اليوم الثاني والأربعون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 18)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الأربعاء - 15/07/2026 (اليوم الثالث والأربعون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 19)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الخميس - 16/07/2026 (اليوم الرابع والأربعون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 20)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead datehead-friday">الجمعة - 17/07/2026 (اليوم الخامس والأربعون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزآن 21 - 22)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>إخراج صدقة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">السبت - 18/07/2026 (اليوم السادس والأربعون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 23)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الأحد - 19/07/2026 (اليوم السابع والأربعون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 24)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الاثنين - 20/07/2026 (اليوم الثامن والأربعون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 25)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الثلاثاء - 21/07/2026 (اليوم التاسع والأربعون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 26)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الأربعاء - 22/07/2026 (اليوم الخمسون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 27)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead">الخميس - 23/07/2026 (اليوم الحادي والخمسون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزء 28)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+    <table>
+    <tr><th colspan="3" class="datehead datehead-friday">الجمعة - 24/07/2026 (اليوم الثاني والخمسون)</th></tr>
+    <tr><th class="task">المهمة</th><th class="person">محمد</th><th class="person"> فداء</th></tr>
+    
+        <tr>
+          <td>قراءة القرآن (الجزآن 29 - 30)</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار الصباح</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>أذكار المساء</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الصلاة على النبي ﷺ 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الاستغفار 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>لا حول ولا قوة إلا بالله 100 مرة</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>قيام الليل ولو 3 ركعات</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        
+        <tr>
+          <td>الدعاء اليومي</td>
+          <td style="text-align:center"><input type="checkbox"></td>
+          <td style="text-align:center"><input type="checkbox"></td>
+        </tr>
+        </table>
+</body>
+</html>
