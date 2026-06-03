@@ -108,13 +108,39 @@ firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 let isUpdatingFromServer = false;
 
+function getCheckboxId(checkbox){
+  const row = checkbox.closest('tr');
+  if(!row) return null;
+  const taskCell = row.querySelector('.task');
+  const personHeader = checkbox.closest('table').querySelectorAll('th')[Array.from(checkbox.closest('table').querySelectorAll('th')).indexOf(checkbox.closest('td')?.parentElement.querySelector('th')) || 1];
+  
+  // Get task name
+  const taskName = taskCell ? taskCell.textContent.trim() : '';
+  
+  // Get person name from table header
+  const table = checkbox.closest('table');
+  const thCells = table.querySelectorAll('th');
+  const tdIndex = Array.from(checkbox.closest('tr').querySelectorAll('td')).indexOf(checkbox.closest('td'));
+  const personName = thCells[tdIndex + 1] ? thCells[tdIndex + 1].textContent.trim() : '';
+  
+  // Get date from the table's datehead
+  const dateheader = table.querySelector('.datehead');
+  const dateName = dateheader ? dateheader.textContent.trim() : '';
+  
+  return `${dateName}_${taskName}_${personName}`.replace(/\s+/g, '_');
+}
+
 function saveCheckboxState(){
-  if(isUpdatingFromServer) return; // Don't save if we're updating from server
+  if(isUpdatingFromServer) return;
   
   const checkboxes = document.querySelectorAll('input[type="checkbox"]');
   const state = {};
-  checkboxes.forEach((checkbox, index) => {
-    state[index] = checkbox.checked;
+  
+  checkboxes.forEach((checkbox) => {
+    const id = getCheckboxId(checkbox);
+    if(id){
+      state[id] = checkbox.checked;
+    }
   });
   
   // Save to Firebase
@@ -124,7 +150,6 @@ function saveCheckboxState(){
     lastUpdated: timestamp
   }).catch(err => {
     console.error('Error saving to Firebase:', err);
-    // Fallback to localStorage if Firebase fails
     localStorage.setItem('checkboxState', JSON.stringify(state));
   });
 }
@@ -136,9 +161,10 @@ function loadCheckboxState(){
       const state = snapshot.val();
       isUpdatingFromServer = true;
       const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-      checkboxes.forEach((checkbox, index) => {
-        if(state[index] !== undefined){
-          checkbox.checked = state[index];
+      checkboxes.forEach((checkbox) => {
+        const id = getCheckboxId(checkbox);
+        if(id && state[id] !== undefined){
+          checkbox.checked = state[id];
         }
       });
       isUpdatingFromServer = false;
@@ -147,14 +173,14 @@ function loadCheckboxState(){
     }
   }).catch(err => {
     console.error('Error loading from Firebase:', err);
-    // Fallback to localStorage
     const state = localStorage.getItem('checkboxState');
     if(state){
       const parsed = JSON.parse(state);
       const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-      checkboxes.forEach((checkbox, index) => {
-        if(parsed[index] !== undefined){
-          checkbox.checked = parsed[index];
+      checkboxes.forEach((checkbox) => {
+        const id = getCheckboxId(checkbox);
+        if(id && parsed[id] !== undefined){
+          checkbox.checked = parsed[id];
         }
       });
     }
@@ -162,15 +188,15 @@ function loadCheckboxState(){
 }
 
 function setupRealtimeSync(){
-  // Listen for real-time updates from Firebase
   database.ref('checkboxState/state').on('value', (snapshot) => {
     if(snapshot.exists() && !isUpdatingFromServer){
       const state = snapshot.val();
       isUpdatingFromServer = true;
       const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-      checkboxes.forEach((checkbox, index) => {
-        if(state[index] !== undefined && checkbox.checked !== state[index]){
-          checkbox.checked = state[index];
+      checkboxes.forEach((checkbox) => {
+        const id = getCheckboxId(checkbox);
+        if(id && state[id] !== undefined && checkbox.checked !== state[id]){
+          checkbox.checked = state[id];
         }
       });
       isUpdatingFromServer = false;
